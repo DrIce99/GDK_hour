@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="it">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <title>Glyph Clock - Banyue</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        html,
+        body {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            background-color: #000;
+            overflow: hidden;
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            font-family: sans-serif;
+        }
+
+        .glyph-btn {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            background: transparent;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        /* --- CONTENITORI PAGINE --- */
+        .page {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+        }
+
+        .glyph-svg {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.6s ease;
+        }
+
+        /* Gestione Stili dei Tracciati SVG */
+        .glyph-svg path {
+            stroke: #333333;
+            stroke-dasharray: var(--len, 2000);
+            stroke-dashoffset: var(--len, 2000);
+            transition: stroke-dashoffset 0.7s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.4s ease;
+        }
+
+        /* Limitato alla pagina 1: altrimenti disegnerebbe subito anche Banyue,
+           annullando il suo effetto disegno (.banyue-svg.drawn) */
+        .glyph-btn.active .page-1 .glyph-svg path {
+            stroke: #FFFFFF;
+            stroke-dashoffset: 0;
+        }
+
+        /* Stasamento temporale a cascata */
+        .glyph-svg path:nth-child(1) {
+            transition-delay: 0.00s;
+        }
+
+        .glyph-svg path:nth-child(2) {
+            transition-delay: 0.04s;
+        }
+
+        .glyph-svg path:nth-child(3) {
+            transition-delay: 0.08s;
+        }
+
+        .glyph-svg path:nth-child(4) {
+            transition-delay: 0.12s;
+        }
+
+        .glyph-svg path:nth-child(5) {
+            transition-delay: 0.16s;
+        }
+
+        .glyph-svg path:nth-child(6) {
+            transition-delay: 0.20s;
+        }
+
+        .glyph-svg path:nth-child(7) {
+            transition-delay: 0.24s;
+        }
+
+        .glyph-svg path:nth-child(8) {
+            transition-delay: 0.28s;
+        }
+
+        .glyph-svg path:nth-child(9) {
+            transition-delay: 0.32s;
+        }
+
+        /* --- ANIMAZIONE TRANSIZIONE PAGINA 1 -> PAGINA 2 --- */
+        .page-1.exit .glyph-svg {
+            transform: translateY(-100vh);
+        }
+
+        .page-1.exit .glyph-svg path {
+            stroke-dashoffset: var(--len, 2000) !important;
+        }
+
+        /* --- FRECCIA NOTHING UI (7 PALLINI) --- */
+        .nothing-arrow {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease, transform 0.8s cubic-bezier(0.77, 0, 0.175, 1), bottom 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+            z-index: 100;
+        }
+
+        .glyph-btn.active .nothing-arrow {
+            opacity: 1;
+        }
+
+        .dot {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background-color: #FFF;
+            border-radius: 50%;
+            transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+        }
+
+        /* Posizioni freccia verso il basso (V) */
+        /* Il pallino centrale (la punta) ha lo spostamento maggiore rispetto
+           agli altri, sia nella posa iniziale sia nel delta verso in-banyue,
+           cosicché durante il flip percorra più strada di tutti gli altri. */
+        .dot:nth-child(1) {
+            transform: translate(-24px, -8px);
+        }
+
+        .dot:nth-child(2) {
+            transform: translate(-16px, -4px);
+        }
+
+        .dot:nth-child(3) {
+            transform: translate(-8px, 0px);
+        }
+
+        .dot:nth-child(4) {
+            transform: translate(0px, 4px);
+        }
+
+        /* Punta (percorre più strada) */
+        .dot:nth-child(5) {
+            transform: translate(8px, 0px);
+        }
+
+        .dot:nth-child(6) {
+            transform: translate(16px, -4px);
+        }
+
+        .dot:nth-child(7) {
+            transform: translate(24px, -8px);
+        }
+
+        /* Freccia invertita in alto (Pagina Banyue) */
+        .nothing-arrow.in-banyue {
+            bottom: calc(100vh - 50px);
+        }
+
+        .nothing-arrow.in-banyue .dot:nth-child(1) {
+            transform: translate(-24px, 8px);
+        }
+
+        .nothing-arrow.in-banyue .dot:nth-child(2) {
+            transform: translate(-16px, 4px);
+        }
+
+        .nothing-arrow.in-banyue .dot:nth-child(3) {
+            transform: translate(-8px, 0px);
+        }
+
+        .nothing-arrow.in-banyue .dot:nth-child(4) {
+            transform: translate(0px, -4px);
+        }
+
+        /* Punta inverte in alto */
+        .nothing-arrow.in-banyue .dot:nth-child(5) {
+            transform: translate(8px, 0px);
+        }
+
+        .nothing-arrow.in-banyue .dot:nth-child(6) {
+            transform: translate(16px, 4px);
+        }
+
+        .nothing-arrow.in-banyue .dot:nth-child(7) {
+            transform: translate(24px, 8px);
+        }
+
+        /* --- PAGINA 2: BANYUE --- */
+        .page-2 {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(100vh);
+        }
+
+        .page-2.active-page {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        /* Gradiente ed Effetto Disegno di Banyue SVG */
+        .banyue-svg path {
+            stroke: url(#banyueGradient) !important;
+            stroke-dasharray: var(--len, 2000);
+            stroke-dashoffset: var(--len, 2000);
+            /* Inizialmente nascosto */
+            transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* L'animazione parte solo quando scatta la classe .drawn (dopo lo swipe) */
+        .banyue-svg.drawn path {
+            stroke-dashoffset: 0;
+        }
+
+        /* Layer Sfondo: 8 SVG in Cerchio */
+        .background-ring {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            animation: rotateRing 25s cubic-bezier(0.92, 0.29, 0.04, 0.73) infinite;
+            pointer-events: none;
+        }
+
+        .bg-element {
+            --ring-radius: calc(var(--ring-size) * 0.38);
+            --elem-size: calc(var(--ring-size) * 0.2);
+            position: absolute;
+            top: calc(50% - (var(--elem-size) / 2));
+            left: calc(50% - (var(--elem-size) / 2));
+            width: var(--elem-size);
+            height: var(--elem-size);
+            opacity: 0.6;
+            transition: opacity 0.6s ease;
+        }
+
+        .bg-element svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+
+            animation: counterRotate 10s ease-in-out infinite;
+            animation-delay: var(--rot-delay, 0s);
+            animation-direction: alternate;
+        }
+
+        /* Il pallino/ball riprende il gradiente di Banyue, più tenue */
+        .bg-element svg path {
+            fill: url(#banyueGradient);
+            stroke: none;
+            transform: scale(0.75);
+            transform-origin: center;
+            transform-box: fill-box;
+        }
+
+        /* Disposizione degli 8 elementi in cerchio */
+        .bg-element:nth-child(1) {
+            transform: rotate(0deg) translate(var(--ring-radius)) rotate(0deg);
+        }
+
+        .bg-element:nth-child(2) {
+            transform: rotate(-45deg) translate(var(--ring-radius)) rotate(45deg);
+        }
+
+        .bg-element:nth-child(3) {
+            transform: rotate(-90deg) translate(var(--ring-radius)) rotate(90deg);
+        }
+
+        .bg-element:nth-child(4) {
+            transform: rotate(-135deg) translate(var(--ring-radius)) rotate(135deg);
+        }
+
+        .bg-element:nth-child(5) {
+            transform: rotate(-180deg) translate(var(--ring-radius)) rotate(180deg);
+        }
+
+        .bg-element:nth-child(6) {
+            transform: rotate(-225deg) translate(var(--ring-radius)) rotate(225deg);
+        }
+
+        .bg-element:nth-child(7) {
+            transform: rotate(-270deg) translate(var(--ring-radius)) rotate(270deg);
+        }
+
+        .bg-element:nth-child(8) {
+            transform: rotate(-315deg) translate(var(--ring-radius)) rotate(315deg);
+        }
+
+        .bg-element:nth-child(1) svg {
+            --rot-delay: -3.4s;
+            --rot-duration: 23.5s;
+        }
+
+        .bg-element:nth-child(2) svg {
+            --rot-delay: -14.8s;
+            --rot-duration: 26.2s;
+        }
+
+        .bg-element:nth-child(3) svg {
+            --rot-delay: -8.1s;
+            --rot-duration: 24.0s;
+        }
+
+        .bg-element:nth-child(4) svg {
+            --rot-delay: -19.5s;
+            --rot-duration: 27.1s;
+        }
+
+        .bg-element:nth-child(5) svg {
+            --rot-delay: -1.2s;
+            --rot-duration: 22.8s;
+        }
+
+        .bg-element:nth-child(6) svg {
+            --rot-delay: -11.0s;
+            --rot-duration: 25.5s;
+        }
+
+        .bg-element:nth-child(7) svg {
+            --rot-delay: -6.7s;
+            --rot-duration: 23.9s;
+        }
+
+        .bg-element:nth-child(8) svg {
+            --rot-delay: -16.3s;
+            --rot-duration: 26.8s;
+        }
+
+        .ring-mask-wrapper {
+            /* Unifichiamo la dimensione dell'anello */
+            --ring-size: clamp(450px, 80vmin, 520px);
+
+            position: absolute;
+            width: var(--ring-size);
+            height: var(--ring-size);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            pointer-events: none;
+
+            /* SPOSTAMENTO VERSO L'ALTO:
+       Aumenta o diminuisci i pixel (-60px, -100px, ecc.) per alzare l'anello a tuo piacimento */
+            transform: translateY(-180px);
+
+            /* MASCHERA POLIGONALE FISSA */
+            clip-path: polygon(100% 0, 0 0, 0 75%, 50% 20%, 100% 75%);
+        }
+
+        @keyframes rotateRing {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes counterRotate {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(-360deg);
+            }
+        }
+
+        /* --- TRAGITTO AD ANELLO DELLE PALLINE (TRAIETTORIA DISEGNO) --- */
+        @keyframes ballEntryTrajectory {
+            0% {
+                /* Partenza dal basso, allineate in colonna */
+                transform: translate(0, 1500px) scale(0.3);
+                opacity: 0;
+            }
+
+            45% {
+                /* Salita verticale sparata verso l'alto */
+                transform: translate(0, -140px) scale(1);
+                opacity: 1;
+            }
+
+            65% {
+                /* Curva in alto a destra (il cappio/loop del disegno) */
+                transform: translate(65px, -90px) scale(1);
+            }
+
+            80% {
+                /* Discesa interna alla curva */
+                transform: translate(20px, -30px) scale(1);
+            }
+
+            100% {
+                /* Assestamento nella posizione finale sul cerchio */
+                transform: var(--final-pos);
+                opacity: 1;
+            }
+        }
+
+        /* Posizioni finali di ciascun elemento nell'anello */
+        .bg-element:nth-child(1) {
+            --final-pos: rotate(0deg) translate(var(--ring-radius)) rotate(0deg);
+        }
+
+        .bg-element:nth-child(2) {
+            --final-pos: rotate(-45deg) translate(var(--ring-radius)) rotate(45deg);
+        }
+
+        .bg-element:nth-child(3) {
+            --final-pos: rotate(-90deg) translate(var(--ring-radius)) rotate(90deg);
+        }
+
+        .bg-element:nth-child(4) {
+            --final-pos: rotate(-135deg) translate(var(--ring-radius)) rotate(135deg);
+        }
+
+        .bg-element:nth-child(5) {
+            --final-pos: rotate(-180deg) translate(var(--ring-radius)) rotate(180deg);
+        }
+
+        .bg-element:nth-child(6) {
+            --final-pos: rotate(-225deg) translate(var(--ring-radius)) rotate(225deg);
+        }
+
+        .bg-element:nth-child(7) {
+            --final-pos: rotate(-270deg) translate(var(--ring-radius)) rotate(270deg);
+        }
+
+        .bg-element:nth-child(8) {
+            --final-pos: rotate(-315deg) translate(var(--ring-radius)) rotate(315deg);
+        }
+
+        /* --- GESTIONE STATO DI ENTRATA (.entry-animating) --- */
+        /* Durante l'entrata: nessuna rotazione continua dell'anello */
+        .page-2.entry-animating .background-ring {
+            animation: none !important;
+        }
+
+        /* Attivazione traiettoria a cascata (sfalsata di 0.09s tra ogni pallina) */
+        .page-2.entry-animating .bg-element {
+            animation: ballEntryTrajectory 1.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            animation-delay: calc(var(--idx, 0) * 0.09s);
+        }
+
+        .bg-element:nth-child(1) {
+            --idx: 0;
+        }
+
+        .bg-element:nth-child(2) {
+            --idx: 1;
+        }
+
+        .bg-element:nth-child(3) {
+            --idx: 2;
+        }
+
+        .bg-element:nth-child(4) {
+            --idx: 3;
+        }
+
+        .bg-element:nth-child(5) {
+            --idx: 4;
+        }
+
+        .bg-element:nth-child(6) {
+            --idx: 5;
+        }
+
+        .bg-element:nth-child(7) {
+            --idx: 6;
+        }
+
+        .bg-element:nth-child(8) {
+            --idx: 7;
+        }
+
+        /* La maschera e l'SVG Banyue rimangono nascosti fino a completamento */
+        .ring-mask-wrapper {
+            clip-path: none;
+            /* Disattivata inizialmente per mostrare le palline che salgono dal basso */
+            transition: clip-path 0.4s ease;
+        }
+
+        .banyue-svg {
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        /* --- STATO FINALE (.entry-complete) --- */
+        /* Attiva la maschera e mostra l'SVG Banyue */
+        .page-2.entry-complete .ring-mask-wrapper {
+            clip-path: polygon(100% 0, 0 0, 0 75%, 50% 20%, 100% 75%);
+        }
+
+        .page-2.entry-complete .banyue-svg {
+            opacity: 1;
+        }
+
+        /* Ripristina la rotazione continua dell'anello */
+        .page-2.entry-complete .background-ring {
+            animation: rotateRing 25s linear infinite;
+        }
+
+        /* #banyueContainer va reso un elemento posizionato con z-index
+           esplicito: senza questo, essendo un figlio "static" di un flex
+           container, verrebbe dipinto PRIMA di .background-ring (che è
+           position:absolute con z-index positivo) e quindi finirebbe
+           dietro l'anello invece che davanti. */
+        #banyueContainer {
+            position: relative;
+            z-index: 2;
+            /* Sopra la griglia ruotante */
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw 2s ease forwards;
+        }
+
+        @keyframes draw {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        /* --- PAGINA 3: MIYABI (TIMER) --- */
+        /* Banyue esce verso sinistra quando si scorre su Miyabi */
+        .page-2.side-exit {
+            transform: translateX(-100vw);
+        }
+
+        /* L'opacità si azzera solo a fine transizione, così l'uscita resta visibile */
+        .page-3 {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(100vw);
+            transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1), opacity 0s linear 0.8s;
+        }
+
+        .page-3.active-page {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(0);
+            transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+        }
+
+        .page-3.exit-down {
+            transform: translateY(100vh);
+        }
+
+        .miyabi-layout {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            /* Nessun margine laterale: la scena è ritagliata dal fotogramma e continua oltre i bordi */
+            padding: 72px 0 calc(32px + env(safe-area-inset-bottom));
+        }
+
+        #miyabiContainer {
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .miyabi-svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .miyabi-svg path {
+            stroke: url(#miyabiGradient) !important;
+            stroke-dasharray: var(--len, 2000);
+            stroke-dashoffset: var(--len, 2000);
+            transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .miyabi-svg .miyabi-blade path {
+            stroke: url(#miyabiBladeGradient) !important;
+        }
+        .miyabi-svg.drawn path {
+            stroke-dashoffset: 0;
+        }
+
+        .miyabi-timer {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 22px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .page-3.active-page .miyabi-timer {
+            opacity: 1;
+            transition-delay: 0.5s;
+        }
+
+        /* Display a matrice di punti (stile Nothing) */
+        .miyabi-digits {
+            width: min(78vw, 300px);
+            height: auto;
+            display: block;
+        }
+
+        .miyabi-digits circle {
+            fill: #1D1D1D;
+            transition: fill 0.15s ease;
+        }
+
+        .miyabi-digits circle.on {
+            fill: #FFFFFF;
+        }
+
+        .miyabi-digits.done circle.on {
+            animation: miyabiBlink 1s steps(1) infinite;
+        }
+
+        @keyframes miyabiBlink {
+            50% {
+                fill: #1D1D1D;
+            }
+        }
+
+        .miyabi-controls {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .miyabi-ctl {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 1px solid #333333;
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease, opacity 0.3s ease;
+        }
+
+        .miyabi-ctl:active {
+            background-color: #151515;
+        }
+
+        .miyabi-ctl.primary {
+            width: 68px;
+            height: 68px;
+            border-color: #7FE7FF;
+        }
+
+        .miyabi-ctl.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .miyabi-ctl svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* Fendente che appare quando la katana viene rinfoderata */
+        .miyabi-slash {
+            position: absolute;
+            left: -20vw;
+            top: 40%;
+            width: 140vw;
+            height: 2px;
+            z-index: 3;
+            pointer-events: none;
+            opacity: 0;
+            background: linear-gradient(90deg, transparent, #BFF6FF 20%, #FFFFFF 50%, #BFF6FF 80%, transparent);
+            box-shadow: 0 0 12px 2px rgba(127, 231, 255, 0.7);
+            transform: rotate(-28deg) scaleX(0);
+        }
+
+        .miyabi-slash.slashing {
+            animation: miyabiSlash 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        @keyframes miyabiSlash {
+            0% {
+                opacity: 1;
+                transform: rotate(-28deg) scaleX(0);
+            }
+
+            25% {
+                opacity: 1;
+                transform: rotate(-28deg) scaleX(1);
+            }
+
+            100% {
+                opacity: 0;
+                transform: rotate(-28deg) scaleX(1);
+            }
+        }
+
+        /* Cristalli di ghiaccio che scendono sullo sfondo */
+        .frost {
+            position: absolute;
+            top: 0;
+            left: var(--x);
+            width: var(--size);
+            height: var(--size);
+            border-radius: 50%;
+            background-color: #BFF6FF;
+            opacity: 0;
+            z-index: 1;
+            pointer-events: none;
+            animation: frostFall var(--dur) linear infinite;
+            animation-delay: var(--delay);
+        }
+
+        .page-3:not(.active-page) .frost {
+            animation-play-state: paused;
+        }
+
+        @keyframes frostFall {
+            0% {
+                opacity: 0;
+                transform: translate(0, -5vh);
+            }
+
+            10%,
+            90% {
+                opacity: 0.45;
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(var(--drift), 105vh);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <button id="btnToggle" class="glyph-btn" aria-label="Attiva/Disattiva Servizio">
+
+        <!-- FRECCIA NOTHING (7 PALLINI) -->
+        <div id="nothingArrow" class="nothing-arrow">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span> <!-- Punta -->
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        </div>
+
+        <!-- PAGINA 1: SVG PRINCIPALE -->
+        <div id="page1" class="page page-1">
+            <svg class="glyph-svg" viewBox="720 68 460 940" xmlns="http://www.w3.org/2000/svg"
+                preserveAspectRatio="xMidYMid meet">
+                <path
+                    d="M 952,974 958,974 962,978 962,979 963,980 963,981 964,982 964,987 962,989 962,990 960,992 960,993 959,994 952,994 948,990 948,989 947,988 947,980 948,979 948,978"
+                    stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                <path
+                    d="M 951,974 948,977 948,979 947,980 947,988 948,989 948,991 951,994 960,994 960,993 962,991 962,990 963,989 963,988 964,987 964,982 963,981 963,980 962,979 962,977 959,974"
+                    stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                <path
+                    d="M 951,835 957,835 958,836 959,836 960,837 960,838 962,840 962,934 963,935 963,949 962,950 962,952 959,955 958,955 957,956 953,956 952,955 951,955 948,952 948,951 947,950 947,895 946,842 947,841 947,839"
+                    stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                <path
+                    d="M 951,835 950,836 949,836 947,838 947,841 946,842 946,894 947,895 947,950 948,951 948,953 950,955 952,955 953,956 957,956 958,955 960,955 962,953 962,951 963,950 963,935 962,934 962,839 960,837 960,836 959,836 958,835"
+                    stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                <path
+                    d="M 926,280 979,280 981,282 993,282 1027,290 1054,300 1082,314 1110,333 1139,359 1153,377 1148,384 1141,384 1121,363 1089,337 1073,327 1033,309 1014,303 981,297 929,296 884,305 856,315 828,329 790,357 771,376 760,391 758,396 760,683 773,702 805,731 834,750 867,765 897,774 927,779 967,780 987,778 1016,772 1043,763 1071,750 1100,731 1135,698 1145,684 1145,544 1150,538 1156,538 1161,543 1161,687 1149,706 1111,742 1088,758 1060,773 1016,789 964,797 941,797 937,795 920,795 917,793 897,791 864,781 827,764 802,748 782,732 750,699 744,686 744,522 742,517 742,393 744,387 754,372 778,347 800,329 823,314 855,298 884,288 911,282 924,282"
+                    stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                <path
+                    d="M 926,280 924,282 911,282 892,286 863,295 817,317 777,347 754,371 744,387 742,393 744,686 751,701 781,732 801,748 826,764 861,780 897,791 917,793 920,795 937,795 941,797 964,797 1016,789 1063,772 1089,758 1112,742 1149,707 1161,687 1161,542 1157,538 1150,538 1145,543 1145,683 1135,697 1099,731 1070,750 1045,762 1016,772 987,778 967,780 927,779 897,774 870,766 835,750 806,731 773,701 760,683 758,396 760,391 791,357 829,329 857,315 885,305 929,296 981,297 1005,301 1035,310 1072,327 1088,337 1120,363 1140,384 1149,384 1153,377 1139,358 1111,333 1081,313 1057,301 1027,290 993,282 981,282 979,280"
+                    stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                <path
+                    d="M 1120,109 1125,114 1125,120 1122,123 1122,124 1118,128 1118,129 1112,135 1112,136 1108,140 1108,141 1102,147 1102,148 1100,150 1100,151 1099,152 1098,152 1098,153 1097,154 1096,154 1096,155 1092,159 1092,160 1088,164 1088,165 1082,171 1082,172 1079,175 1079,176 1072,183 1072,184 1069,187 1069,188 1062,195 1062,196 1059,199 1059,200 1053,206 1053,207 1051,209 1051,210 1050,211 1049,211 1049,212 1042,219 1042,220 1039,223 1039,224 1038,225 1037,225 1035,227 1031,227 1029,225 1028,225 1025,222 1025,216 1029,212 1029,211 1033,207 1033,206 1039,200 1039,199 1042,196 1042,195 1049,188 1049,187 1051,185 1051,184 1058,177 1058,176 1060,174 1060,173 1068,165 1068,164 1072,160 1072,159 1078,153 1078,152 1082,148 1082,147 1088,141 1088,140 1092,136 1092,135 1098,129 1098,128 1102,124 1102,123 1108,117 1108,116 1110,114 1110,113 1111,112 1112,112 1115,109"
+                    stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                <path
+                    d="M 1122,110 1121,110 1120,109 1115,109 1114,110 1113,110 1111,112 1110,112 1110,113 1108,115 1108,116 1102,122 1102,123 1098,127 1098,128 1092,134 1092,135 1088,139 1088,140 1082,146 1082,147 1078,151 1078,152 1072,158 1072,159 1068,163 1068,164 1060,172 1060,173 1058,175 1058,176 1051,183 1051,184 1049,186 1049,187 1042,194 1042,195 1039,198 1039,199 1033,205 1033,206 1029,210 1029,211 1025,215 1025,223 1027,225 1028,225 1030,227 1036,227 1038,225 1039,225 1039,224 1042,221 1042,220 1049,213 1049,212 1050,211 1051,211 1051,210 1053,208 1053,207 1059,201 1059,200 1062,197 1062,196 1069,189 1069,188 1072,185 1072,184 1079,177 1079,176 1082,173 1082,172 1088,166 1088,165 1092,161 1092,160 1096,156 1096,155 1097,154 1098,154 1098,153 1099,152 1100,152 1100,151 1102,149 1102,148 1108,142 1108,141 1112,137 1112,136 1118,130 1118,129 1122,125 1122,124 1124,122 1124,121 1125,120 1125,114 1124,113 1124,112"
+                    stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                <path
+                    d="M 795,81 805,81 807,83 814,83 816,85 820,85 822,87 824,87 826,89 828,89 830,91 831,91 844,103 844,104 848,109 848,111 850,113 852,117 852,119 854,122 854,127 856,129 856,135 853,138 843,138 840,135 840,130 839,129 838,124 834,116 832,114 832,113 826,107 825,107 819,102 817,101 815,101 812,99 808,99 804,97 795,97 793,99 787,99 777,104 768,112 765,118 763,120 763,122 760,127 760,133 759,134 759,172 760,173 759,174 760,175 760,238 762,241 763,246 765,248 766,251 768,253 768,254 774,260 775,260 783,266 786,266 789,268 811,268 814,266 816,266 820,264 822,262 826,260 832,254 832,253 836,248 838,244 839,239 840,238 840,202 843,199 854,199 856,201 856,238 854,241 854,246 852,248 852,251 850,253 850,255 848,257 846,261 843,264 843,265 836,272 832,274 829,277 827,278 825,278 823,280 821,280 818,282 815,282 812,284 789,284 788,283 786,283 785,282 782,282 779,280 777,280 773,278 771,276 767,274 763,270 762,270 754,261 754,260 750,255 750,253 748,251 748,249 746,246 746,242 744,239 744,125 746,123 746,119 748,117 748,115 750,111 752,109 752,107 758,101 758,100 760,99 761,97 762,97 763,95 764,95 768,91 773,89 775,87 777,87 780,85 783,85 786,83 793,83"
+                    stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                <path
+                    d="M 795,81 793,83 785,83 782,85 779,85 776,87 774,87 772,89 767,91 763,95 762,95 762,96 760,97 760,98 758,99 758,100 753,105 752,108 750,110 748,114 748,116 746,119 746,122 744,125 744,239 746,242 746,247 752,259 754,261 754,262 759,267 759,268 761,270 762,270 766,274 767,274 772,278 774,278 776,280 778,280 781,282 785,282 788,284 812,284 815,282 819,282 822,280 824,280 826,278 828,278 830,277 833,274 837,272 843,266 843,265 848,259 850,254 852,252 852,249 854,246 854,241 856,239 856,200 855,199 842,199 840,201 840,238 838,241 838,244 836,246 836,247 834,249 832,253 825,260 824,260 819,264 815,266 813,266 810,268 789,268 787,266 784,266 782,264 781,264 779,262 775,260 768,253 768,252 766,250 766,249 764,247 762,243 762,240 760,238 760,175 759,174 760,173 759,172 759,134 760,133 760,127 762,125 762,123 764,119 768,114 768,113 778,104 788,99 793,99 795,97 804,97 807,99 812,99 814,101 816,101 818,102 824,107 825,107 832,114 832,115 836,120 836,122 838,124 838,127 840,130 840,136 842,138 853,138 856,136 856,129 854,127 854,121 852,118 852,116 850,112 848,110 848,108 846,106 844,102 832,91 831,91 829,89 827,89 825,87 823,87 821,85 817,85 815,83 807,83 805,81"
+                    stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+            </svg>
+        </div>
+
+        <!-- PAGINA 2: BANYUE -->
+        <div id="page2" class="page page-2">
+            <div class="ring-mask-wrapper">
+                <div id="bgRing" class="background-ring"></div>
+            </div>
+            <svg width="0" height="0" style="position: absolute;">
+                <defs>
+                    <linearGradient id="banyueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#FF3B30" />
+                        <stop offset="100%" stop-color="#FF9500" />
+                    </linearGradient>
+                </defs>
+            </svg>
+
+            <div id="banyueContainer"></div>
+        </div>
+
+        <!-- PAGINA 3: MIYABI (TIMER) -->
+        <div id="page3" class="page page-3">
+            <div id="miyabiFrost"></div>
+            <div class="miyabi-layout">
+                <div id="miyabiContainer"></div>
+                <div class="miyabi-timer">
+                    <svg id="miyabiDigits" class="miyabi-digits" xmlns="http://www.w3.org/2000/svg"></svg>
+                    <div id="miyabiControls" class="miyabi-controls">
+                        <div class="miyabi-ctl" data-slot="left" role="button" tabindex="0"></div>
+                        <div class="miyabi-ctl primary" data-slot="center" role="button" tabindex="0"></div>
+                        <div class="miyabi-ctl" data-slot="right" role="button" tabindex="0"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="miyabiSlash" class="miyabi-slash"></div>
+        </div>
+
+    </button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>
